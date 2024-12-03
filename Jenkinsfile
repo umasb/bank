@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    
+
     tools {
         jdk 'jdk17'
         maven '3.6.3'
@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         SONARQUBE_SERVER = 'sonar'  // Jenkins SonarQube server name
-        SCANNER_HOME= tool 'sonar-scanner'
+        SCANNER_HOME = tool 'sonar-scanner'
         TRIVY_IMAGE = 'aquasec/trivy:latest'  // Trivy Docker image
         KUBE_CONFIG_PATH = credentials('k8-secret')
         NAMESPACE = 'bank'
@@ -16,10 +16,8 @@ pipeline {
         IMAGE_TAG = 'latest'  // Tag
     }
 
-
     stages {
         stage('Clone Repository') {
-        
             steps {
                 echo 'Cloning the repository...'
                 script {
@@ -44,20 +42,36 @@ pipeline {
                 }
             }
         }
-        
-        
+
+        stage('Print Java File Path') {
+            steps {
+                script {
+                    // Specify the file name you're looking for
+                    def javaFileName = 'src/main/java/com/example/MyApp.java'
+                    
+                    // Check if the file exists and print the path
+                    if (fileExists(javaFileName)) {
+                        echo "The Java file is located at: ${pwd()}/${javaFileName}"
+                    } else {
+                        echo "The specified Java file does not exist."
+                    }
+                }
+            }
+        }
+
         stage('Build the source code') {
             steps {
                 sh 'mvn clean install'
-                echoc"built done"
+                echo "Build is done"
             }
         }
-        
-        stage('publish artifact to nexus') {
+
+        stage('Publish artifact to Nexus') {
             steps {
-                withMaven(globalMavenSettingsConfig: 'global-settings',jdk: 'jdk17',maven: 'maven3',mavenSettingsConfig: 'custom-settings')
-                sh 'mvn deploy'
-                echo "deployment done"
+                withMaven(globalMavenSettingsConfig: 'global-settings', jdk: 'jdk17', maven: 'maven3', mavenSettingsConfig: 'custom-settings') {
+                    sh 'mvn deploy'
+                    echo "Deployment is done"
+                }
             }
         }
 
@@ -72,9 +86,9 @@ pipeline {
                             sh 'mvn -v'
 
                             // Run SonarQube analysis
-                            sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=payment-gateway \
-                                   -Dsonar.projectKey=payment-gateway -Dsonar.java.binaries=. '''
-                            
+                            sh '''$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=payment-gateway \
+                                   -Dsonar.projectKey=payment-gateway -Dsonar.java.binaries=.'''
+
                             // Debug: Check if the sonar analysis results are available
                             sh 'ls -l target/sonar-report'
                         } catch (Exception e) {
@@ -85,23 +99,22 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Quality gate') {
             steps {
                 script {
-                  waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
-                  }
+                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
+                }
             }
         }
-        
-        stage('Push Image to dockerhub Registry') {
+
+        stage('Push Image to DockerHub Registry') {
             steps {
-                echo 'Pushing Docker image to dockerhub Container Registry...'
+                echo 'Pushing Docker image to DockerHub Container Registry...'
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DKR_USER', passwordVariable: 'DKR_PASS')]) {
                     script {
                         try {
-
-                            // Docker login to dockerhub registry
+                            // Docker login to DockerHub registry
                             sh """
                                 echo ${DKR_PASS} | docker login -u ${DKR_USER} --password-stdin
                             """
@@ -109,7 +122,7 @@ pipeline {
                             // Debug: List Docker images before tagging
                             sh 'docker images'
 
-                            // Tag and push image to dockerhub registry
+                            // Tag and push image to DockerHub registry
                             sh """
                                 docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${DKR_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                                 docker push ${DKR_USER}/${IMAGE_NAME}:${IMAGE_TAG}
@@ -118,8 +131,8 @@ pipeline {
                             // Debug: List images after push to verify
                             sh 'docker images'
                         } catch (Exception e) {
-                            echo "Error pushing Docker image to dockerhub: ${e.getMessage()}"
-                            error("Stopping pipeline due to dockerhub push failure")
+                            echo "Error pushing Docker image to DockerHub: ${e.getMessage()}"
+                            error("Stopping pipeline due to DockerHub push failure")
                         }
                     }
                 }
@@ -149,22 +162,21 @@ pipeline {
             }
         }
 
-        stage('Deploy to kubernetes') {
+        stage('Deploy to Kubernetes') {
             steps {
-                echo 'Deploying application to kubernetes...'
+                echo 'Deploying application to Kubernetes...'
                 script {
                     try {
-                        
-                        // Switch to correct kubernetes project
+                        // Switch to correct Kubernetes project
                         sh """
                             export KUBECONFIG=${KUBE_CONFIG_PATH}
                         """
-                        
+
                         // Apply the deployment configuration
                         sh 'kubectl apply -f deployment-service.yaml'
-                        
+
                         // Debug: Get the list of deployments and pods
-                        sh 'kubctl get deployments -n bank'
+                        sh 'kubectl get deployments -n bank'
                         sh 'kubectl get pods -n bank'
                         sh 'kubectl get svc -n bank'
 
@@ -180,38 +192,37 @@ pipeline {
     }
 
     post {
-    always {
-        script {
-            def jobName = env.JOB_NAME
-            def buildNumber = env.BUILD_NUMBER
-            def pipelineStatus = currentBuild.result ?: 'UNKNOWN'
-            def bannerColor = pipelineStatus.toUpperCase() == 'SUCCESS' ? 'green' : 'red'
+        always {
+            script {
+                def jobName = env.JOB_NAME
+                def buildNumber = env.BUILD_NUMBER
+                def pipelineStatus = currentBuild.result ?: 'UNKNOWN'
+                def bannerColor = pipelineStatus.toUpperCase() == 'SUCCESS' ? 'green' : 'red'
 
-            def body = """
-                <html>
-                <body>
-                <div style="border: 4px solid ${bannerColor}; padding: 10px;">
-                <h2>${jobName} - Build ${buildNumber}</h2>
-                <div style="background-color: ${bannerColor}; padding: 10px;">
-                <h3 style="color: white;">Pipeline Status: ${pipelineStatus.toUpperCase()}</h3>
-                </div>
-                <p>Check the <a href="${BUILD_URL}">console output</a>.</p>
-                </div>
-                </body>
-                </html>
-            """
+                def body = """
+                    <html>
+                    <body>
+                    <div style="border: 4px solid ${bannerColor}; padding: 10px;">
+                    <h2>${jobName} - Build ${buildNumber}</h2>
+                    <div style="background-color: ${bannerColor}; padding: 10px;">
+                    <h3 style="color: white;">Pipeline Status: ${pipelineStatus.toUpperCase()}</h3>
+                    </div>
+                    <p>Check the <a href="${BUILD_URL}">console output</a>.</p>
+                    </div>
+                    </body>
+                    </html>
+                """
 
-            emailext (
-                subject: "${jobName} - Build ${buildNumber} - ${pipelineStatus.toUpperCase()}",
-                body: body,
-                to: 'umabalasubramanian72@gmail.com',
-                from: 'jenkins@example.com',
-                replyTo: 'jenkins@example.com',
-                mimeType: 'text/html',
-                attachmentsPattern: 'trivy.log'
-            )
+                emailext(
+                    subject: "${jobName} - Build ${buildNumber} - ${pipelineStatus.toUpperCase()}",
+                    body: body,
+                    to: 'umabalasubramanian72@gmail.com',
+                    from: 'jenkins@example.com',
+                    replyTo: 'jenkins@example.com',
+                    mimeType: 'text/html',
+                    attachmentsPattern: 'trivy.log'
+                )
+            }
         }
     }
-}
-
 }
