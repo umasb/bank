@@ -1,3 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Project coordinates -->
+    <groupId>com.mybank</groupId>
+    <artifactId>bank-application</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <name>Bank Application</name>
+    <description>Simple Java-based Bank Application</description>
+
+    <packaging>jar</packaging>
+
+    <!-- Properties -->
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source> <!-- Use Java 8 -->
+        <maven.compiler.target>1.8</maven.compiler.target> <!-- Use Java 8 -->
+        <spring.boot.version>2.7.0</spring.boot.version> <!-- Version for Spring Boot -->
+    </properties>
+
+    <!-- Distribution Management -->
+    <distributionManagement>
+        <repository>
+            <id>nexus-releases</id>
+            <name>Nexus Release Repository</name>
+            <url>http://3.94.180.252:8081/repository/maven-releases/</url>
+        </repository>
+
+        <snapshotRepository>
+            <id>nexus-snapshots</id>
+            <name>Nexus Snapshot Repository</name>
+            <url>http://3.94.180.252:8081/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <!-- Dependencies -->
+    <dependencies>
+        <!-- Spring Boot Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>${spring.boot.version}</version> <!-- Specify the version -->
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -33,5 +79,3 @@
     </build>
 
 </project>
-
-                                                                                                                     82,0-1        Bot
