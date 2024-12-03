@@ -49,6 +49,7 @@ pipeline {
         stage('Build the source code') {
             steps {
                 sh 'mvn clean install'
+                echoc"built done"
             }
         }
         
@@ -56,6 +57,7 @@ pipeline {
             steps {
                 withMaven(globalMavenSettingsConfig: 'global-settings',jdk: 'jdk17',maven: 'maven3',mavenSettingsConfig: 'custom-settings')
                 sh 'mvn deploy'
+                echo "deployment done"
             }
         }
 
