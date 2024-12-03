@@ -47,7 +47,7 @@ pipeline {
             steps {
                 script {
                     // Specify the file name you're looking for
-                    def javaFileName = 'src/main/java/com/example/MyApp.java'
+                    def javaFileName = 'src/main/java/com/example/BankApplication.java'
                     
                     // Check if the file exists and print the path
                     if (fileExists(javaFileName)) {
