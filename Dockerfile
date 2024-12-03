@@ -26,4 +26,4 @@ COPY --from=builder /app/target/*.jar app.jar
 EXPOSE 8081
 
 # Command to run the application
-CMD ["java", "-jar", "app.jar"]
+CMD ["java", "-jar", "payementGateway.jar"]
