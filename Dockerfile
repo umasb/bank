@@ -1,15 +1,29 @@
-# Use a base image with Java installed
-FROM openjdk:17-jdk-alpine
+# Base image with JDK 17
+FROM eclipse-temurin:17-jdk as builder
 
-# Set the working directory inside the container
+# Set working directory inside the container
 WORKDIR /app
 
-# Copy the built application JAR file into the container
-# Replace "bank-application.jar" with the name of your generated JAR file
-COPY target/bank-application.jar bank-application.jar
+# Copy the Maven project files to the container
+COPY pom.xml ./
+COPY src ./src/
 
-# Expose the port your Spring Boot application runs on (default is 8080)
-EXPOSE 8080
+# Install Maven dependencies and build the project
+RUN apt-get update && apt-get install -y maven \
+    && mvn clean package -DskipTests
 
-# Set the command to run the application
-ENTRYPOINT ["java", "-jar", "bank-application.jar"]
+# --------------------------------------------------
+# Build the runtime image
+FROM eclipse-temurin:17-jre
+
+# Set working directory inside the container
+WORKDIR /app
+
+# Copy the built application JAR from the builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+# Expose the port your application listens on
+EXPOSE 8081
+
+# Command to run the application
+CMD ["java", "-jar", "app.jar"]
